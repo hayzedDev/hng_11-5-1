@@ -1,0 +1,14 @@
+[Unit]
+Description=DevOpsFetch Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/devopsfetch -p
+Restart=always
+User=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=devopsfetch
+
+[Install]
+WantedBy=multi-user.target
