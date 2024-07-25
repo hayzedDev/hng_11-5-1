@@ -36,10 +36,23 @@ port_details() {
 
 list_docker() {
   echo "Docker Images:"
-  docker images
+  echo
+  printf "| %-25s | %-30s | %-25s | %-25s |\n" "REPOSITORY" "TAG" "IMAGE ID" "SIZE"
+  echo "-----------------------------------------------------------------------------------------------------------------------"
+  docker images --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}" | while IFS=$'\t' read -r repo tag id size; do
+    printf "| %-25s | %-30s | %-25s | %-25s |\n" "$repo" "$tag" "$id" "$size"
+  done
+  echo "-----------------------------------------------------------------------------------------------------------------------"
   echo ""
+
   echo "Docker Containers:"
-  docker ps -a
+  echo
+  printf "| %-25s | %-30s | %-25s | %-25s |\n" "NAMES" "IMAGE" "STATUS" "PORTS"
+  echo "-----------------------------------------------------------------------------------------------------------------------"
+  docker ps -a --format "{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | while IFS=$'\t' read -r name image status ports; do
+    printf "| %-25s | %-30s | %-25s | %-25s |\n" "$name" "$image" "$status" "$ports"
+  done
+  echo "-----------------------------------------------------------------------------------------------------------------------"
 }
 
 docker_details() {
@@ -73,7 +86,7 @@ list_nginx() {
       # Check if line contains server_name
       if echo "$line" | grep -q '\bserver_name\b'; then
         domain=$(echo "$line" | awk -F'server_name' '{print $2}' | awk -F';' '{print $1}' | sed 's/,/, /g' | xargs)
-        
+
         # Special case: If server_name is "_", set domain and proxy to default values
         if [[ "$domain" == "_" ]]; then
           domain="localhost"
@@ -105,7 +118,7 @@ nginx_details() {
 
 list_users() {
   echo -e "USER\t\tLAST LOGIN"
-  lastlog | awk 'NR>1 { 
+  lastlog | awk 'NR>1 {
     last_login = ($4 == "in**") ? "-" : $4 " " $5 " " $6
     printf "%-20s %s\n", $1, last_login
   }' | column -t
@@ -114,7 +127,7 @@ list_users() {
 user_details() {
   USER=$1
   echo -e "USER\t\tLAST LOGIN"
-  lastlog | grep "^$USER" | awk '{ 
+  lastlog | grep "^$USER" | awk '{
     last_login = ($4 == "in**") ? "-" : $4 " " $5 " " $6
     printf "%-20s %s\n", $1, last_login
   }' | column -t
@@ -129,6 +142,66 @@ list_time_range() {
   echo "Showing activities from $START to $END"
   last -F | awk -v start="$START" -v end="$END" '{if ($5 >= start && $5 <= end) print $0}' | column -t
 }
+
+# list_time_range() {
+#   START=$1
+#   END=$2
+
+#   # Check if END is empty and set to current date if so
+#   if [ -z "$END" ]; then
+#     END=$(date +"%Y-%m-%d")
+#   fi
+
+#   echo "Showing activities from $START to $END"
+
+#   # Determine the OS and convert dates to seconds since epoch
+#   if [[ "$(uname)" == "Darwin" ]]; then
+#     # macOS
+#     start_sec=$(date -j -f "%Y-%m-%d" "$START" +%s 2>/dev/null)
+#     end_sec=$(date -j -f "%Y-%m-%d" "$END" +%s 2>/dev/null)
+#   else
+#     # Linux
+#     start_sec=$(date -d "$START" +%s 2>/dev/null)
+#     end_sec=$(date -d "$END" +%s 2>/dev/null)
+#   fi
+
+#   # Check if date conversion was successful
+#   if [ -z "$start_sec" ] || [ -z "$end_sec" ]; then
+#     echo "Error: Invalid date format."
+#     return 1
+#   fi
+
+#   last | while read line; do
+#     # Extract date from the line (assuming format Jul 25)
+#     month=$(echo "$line" | awk '{print $5}')
+#     day=$(echo "$line" | awk '{print $6}')
+#     year=$(date +"%Y")
+
+#     # Handle end-of-year transition
+#     if [ "$month" == "Jan" ] && [ "$(date +%m)" == "12" ]; then
+#       year=$((year - 1))
+#     fi
+
+#     date_str="$year-$month-$day"
+
+#     if [[ "$(uname)" == "Darwin" ]]; then
+#       # macOS
+#       date_sec=$(date -j -f "%Y-%b-%d" "$date_str" +%s 2>/dev/null)
+#     else
+#       # Linux
+#       date_sec=$(date -d "$date_str" +%s 2>/dev/null)
+#     fi
+
+#     # Check if date conversion was successful
+#     # if [ -z "$date_sec" ]; then
+#     #   continue
+#     # fi
+
+#     if [ "$date_sec" -ge "$start_sec" ] && [ "$date_sec" -le "$end_sec" ]; then
+#       echo "$line"
+#     fi
+#   done | column -t
+# }
 
 
 # Process command-line arguments
@@ -172,3 +245,5 @@ case $1 in
     show_help
     ;;
 esac
+
+# rsync -avz /home/azeez/Documents/projects/stage_5-1_task hayzeddev@192.168.1.165:/Users/hayzeddev/Documents/hng-11-devops
